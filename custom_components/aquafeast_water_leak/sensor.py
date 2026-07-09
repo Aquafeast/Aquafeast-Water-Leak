@@ -49,6 +49,76 @@ def _parse_temperature_raw(raw):
     return round(whole + (fraction / 100), 1)
 
 
+def _mode_name(code: int | None) -> str | None:
+    """Return friendly mode name."""
+    if code is None:
+        return None
+
+    mapping = {
+        1: "UnProtect",
+        2: "UnProtect",
+        3: "UnProtect",
+        4: "UnProtect",
+        5: "UnProtect",
+        6: "UnProtect",
+        17: "Mode 1",
+        18: "Mode 2",
+        19: "Mode 3",
+        20: "Mode 4",
+        21: "Mode 5",
+        22: "Mode 6",
+    }
+    return mapping.get(code)
+
+
+def _parse_mode(raw) -> int | None:
+    """Parse mode code."""
+    if raw in (None, "", "-", "--"):
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _fault_description(raw) -> str:
+    """Return fault description from F0 bitmap."""
+    if raw in (None, "", "-", "--"):
+        return "Unknown"
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return "Unknown"
+
+    if value == 0:
+        return "Normal"
+
+    faults: list[str] = []
+    bit_labels = {
+        0: "Power fault / low battery",
+        1: "Empty pipe fault",
+        2: "Reverse flow fault",
+        3: "Overrange fault",
+        4: "Water temperature fault",
+        5: "EE alarm",
+        6: "Water valve fault",
+        12: "Leak warning",
+        13: "Leak warning",
+        14: "Leak warning",
+        15: "Leak detected",
+    }
+
+    for bit, label in bit_labels.items():
+        if value & (1 << bit):
+            faults.append(label)
+
+    if not faults:
+        return f"Fault code {value}"
+
+    return ", ".join(faults)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -67,6 +137,12 @@ async def async_setup_entry(
             AquafeastWaterFlowRateSensor(entry, api, coordinator),
             AquafeastWaterPressureSensor(entry, api, coordinator),
             AquafeastTotalWaterSensor(entry, api, coordinator),
+            AquafeastBatteryLevelSensor(entry, api, coordinator),
+            AquafeastPowerSupplyStatusSensor(entry, api, coordinator),
+            AquafeastLastModeSensor(entry, api, coordinator),
+            AquafeastAiAdaptiveSensor(entry, api, coordinator),
+            AquafeastFaultStatusSensor(entry, api, coordinator),
+            AquafeastFaultCodeSensor(entry, api, coordinator),
             AquafeastRawStatusSensor(entry, api, coordinator),
         ]
     )
@@ -125,17 +201,12 @@ class AquafeastProtectionStateSensor(AquafeastBaseSensor):
     @property
     def native_value(self) -> str:
         """Return protection state."""
-        raw_value = self._data.get("data02")
+        code = _parse_mode(self._data.get("data02"))
 
-        if raw_value is None:
+        if code is None:
             return "Unknown"
 
-        try:
-            code = int(raw_value)
-        except (TypeError, ValueError):
-            return "Unknown"
-
-        if code == 2:
+        if code in (1, 2, 3, 4, 5, 6):
             return "UnProtected"
 
         if code in (17, 18, 19, 20, 21, 22):
@@ -188,8 +259,15 @@ class AquafeastWaterFlowRateSensor(AquafeastBaseSensor):
     @property
     def native_value(self):
         """Return water flow rate."""
-        raw_value = self._data.get("data1C")
-        return _parse_optional_number(raw_value)
+        raw_value = self._data.get("data0B")
+        value = _parse_optional_number(raw_value)
+        if value is None:
+            return None
+
+        if _is_imperial(self._data):
+            return round(value / 227.1247, 2)
+
+        return round(value / 10, 1)
 
 
 class AquafeastWaterPressureSensor(AquafeastBaseSensor):
@@ -210,8 +288,15 @@ class AquafeastWaterPressureSensor(AquafeastBaseSensor):
     @property
     def native_value(self):
         """Return water pressure."""
-        raw_value = self._data.get("data1A")
-        return _parse_optional_number(raw_value)
+        raw_value = self._data.get("data06")
+        value = _parse_optional_number(raw_value)
+        if value is None:
+            return None
+
+        if _is_imperial(self._data):
+            return round((value / 100) * 145.0377, 1)
+
+        return round(value / 100, 2)
 
 
 class AquafeastTotalWaterSensor(AquafeastBaseSensor):
@@ -232,8 +317,153 @@ class AquafeastTotalWaterSensor(AquafeastBaseSensor):
     @property
     def native_value(self):
         """Return total water."""
+        low_raw = self._data.get("data10")
+        high_raw = self._data.get("data11")
+
+        low = _parse_optional_number(low_raw)
+        high = _parse_optional_number(high_raw)
+
+        if low is None and high is None:
+            return None
+
+        low = int(low or 0)
+        high = int(high or 0)
+
+        metric_value = high * 100 + (low / 100)
+
+        if _is_imperial(self._data):
+            return round(metric_value * 264.172, 1)
+
+        return round(metric_value, 2)
+
+
+class AquafeastBatteryLevelSensor(AquafeastBaseSensor):
+    """Battery level sensor."""
+
+    _attr_name = "battery level"
+    _attr_icon = "mdi:battery"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_battery_level"
+
+    @property
+    def native_value(self) -> str:
+        """Return battery level."""
+        raw_value = self._data.get("data1C")
+
+        mapping = {
+            "0": "Critical",
+            "1": "Low",
+            "2": "Medium",
+            "3": "High",
+            "4": "Full",
+        }
+
+        return mapping.get(str(raw_value), "Unknown")
+
+
+class AquafeastPowerSupplyStatusSensor(AquafeastBaseSensor):
+    """Power supply status sensor."""
+
+    _attr_name = "power supply status"
+    _attr_icon = "mdi:power-plug-battery"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_power_supply_status"
+
+    @property
+    def native_value(self) -> str:
+        """Return power supply status."""
         raw_value = self._data.get("data1D")
-        return _parse_optional_number(raw_value)
+
+        mapping = {
+            "0": "Battery only",
+            "1": "Charging",
+            "2": "External power / full",
+        }
+
+        return mapping.get(str(raw_value), "Unknown")
+
+
+class AquafeastLastModeSensor(AquafeastBaseSensor):
+    """Last mode sensor."""
+
+    _attr_name = "last mode"
+    _attr_icon = "mdi:history"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_last_mode"
+
+    @property
+    def native_value(self) -> str:
+        """Return previous mode."""
+        code = _parse_mode(self._data.get("data16"))
+        return _mode_name(code) or "Unknown"
+
+
+class AquafeastAiAdaptiveSensor(AquafeastBaseSensor):
+    """AI adaptive status sensor."""
+
+    _attr_name = "AI adaptive"
+    _attr_icon = "mdi:brain"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_ai_adaptive"
+
+    @property
+    def native_value(self) -> str:
+        """Return AI adaptive status."""
+        raw_value = self._data.get("data28")
+
+        mapping = {
+            "0": "Off",
+            "1": "On",
+        }
+
+        return mapping.get(str(raw_value), "Unknown")
+
+
+class AquafeastFaultStatusSensor(AquafeastBaseSensor):
+    """Fault status sensor."""
+
+    _attr_name = "fault status"
+    _attr_icon = "mdi:alert-circle-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_fault_status"
+
+    @property
+    def native_value(self) -> str:
+        """Return fault description."""
+        return _fault_description(self._data.get("dataF0"))
+
+
+class AquafeastFaultCodeSensor(AquafeastBaseSensor):
+    """Fault code sensor."""
+
+    _attr_name = "fault code"
+    _attr_icon = "mdi:numeric"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_fault_code"
+
+    @property
+    def native_value(self) -> str:
+        """Return raw fault code."""
+        raw_value = self._data.get("dataF0")
+        return str(raw_value) if raw_value is not None else "Unknown"
 
 
 class AquafeastRawStatusSensor(AquafeastBaseSensor):
