@@ -1,4 +1,3 @@
- hacs_badge  
 
 
 # Aquafeast Water Leak Sensor for Home Assistant
