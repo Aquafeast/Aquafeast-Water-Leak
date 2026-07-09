@@ -1,6 +1,6 @@
-![Version](https://img.shields.io/github/v/release/Aquafeast/aquafeast-water-leak?include_prereleases&style=flat-square)
+![Version](https://img.shields.io/github/v/release/Aquafeast/Aquafeast-Water-Leak?style=flat-square)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
-
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Aquafeast Water Leak Sensor for Home Assistant
 
