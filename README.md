@@ -1,3 +1,5 @@
+![Version](https://img.shields.io/github/v/release/YOUR_USERNAME/hacs-aquafeast-water-leak?include_prereleases&style=flat-square)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://hacs.xyz)
 <div align="center">
   <img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS Custom"/>
 </div>
