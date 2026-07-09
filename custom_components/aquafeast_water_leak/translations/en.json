@@ -1,0 +1,14 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Aquafeast Water Leak",
+        "description": "Enter device information",
+        "data": {
+          "mac_address": "MAC address",
+          "device_model": "Device model"
+        }
+      }
+    }
+  }
+}
