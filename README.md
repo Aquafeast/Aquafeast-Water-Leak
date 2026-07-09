@@ -1,3 +1,6 @@
+ hacs_badge  
+
+
 # Aquafeast Water Leak Sensor for Home Assistant
 
 Custom HACS integration for **Aquafeast** Water Leak Sensor with valve control.
