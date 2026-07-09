@@ -21,6 +21,7 @@ Custom HACS integration for **Aquafeast** Water Leak Sensor with valve control.
 https://github.com/Aquafeast/Aquafeast-Water-Leak
 
 Category: **Integration**
+
 4. Search for **Aquafeast Water Leak** and install it
 5. Restart Home Assistant
 
