@@ -63,8 +63,9 @@ automation:
      data:
        message: "🚨 Water leak detected! Valve closed automatically."
 
-**Disclaimer**
+
+## Disclaimer
 This is an unofficial integration using the public (reverse-engineered) API of the device. Use at your own risk. The API may change without notice.
 
-**Support & Issues**
+## Support & Issues
 If you have problems or suggestions, please open an issue on GitHub.
