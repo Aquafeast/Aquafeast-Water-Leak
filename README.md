@@ -1,4 +1,6 @@
-
+<div align="center">
+  <img src="https://img.shields.io/badge/HACS-Custom-orange.svg" alt="HACS Custom"/>
+</div>
 
 # Aquafeast Water Leak Sensor for Home Assistant
 
