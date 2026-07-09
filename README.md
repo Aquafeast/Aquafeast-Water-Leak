@@ -46,24 +46,6 @@ Category: **Integration**
 - **Sensor**: Leak status (Dry / Leak Detected)
 - **Valve**: Main water valve (Open / Close)
 
-## Automation Example
-
-```yaml
-automation:
-- alias: "Water Leak - Shut Off Valve"
- trigger:
-   - platform: state
-     entity_id: binary_sensor.aquafeast_leak   # or however it appears
-     to: "on"
- action:
-   - service: valve.close
-     target:
-       entity_id: valve.aquafeast_valve
-   - service: notify.mobile_app_your_phone
-     data:
-       message: "🚨 Water leak detected! Valve closed automatically."
-
-
 ## Disclaimer
 This is an unofficial integration using the public (reverse-engineered) API of the device. Use at your own risk. The API may change without notice.
 
