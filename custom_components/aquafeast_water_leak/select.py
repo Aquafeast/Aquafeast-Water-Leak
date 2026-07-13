@@ -85,7 +85,7 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
         except (TypeError, ValueError):
             return None
 
-        if 1 <== code <== 6:
+        if 1 <= code <= 6:
             return "UnProtect"
 
         return MODE_STATUS_MAP.get(code)
