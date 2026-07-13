@@ -1,7 +1,7 @@
 {
   "domain": "aquafeast_water_leak",
   "name": "Aquafeast Water Leak",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "documentation": "https://github.com/Aquafeast/Aquafeast-Water-Leak",
   "issue_tracker": "https://github.com/Aquafeast/Aquafeast-Water-Leak/issues",
   "dependencies": [],
