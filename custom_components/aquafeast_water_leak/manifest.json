@@ -1,11 +1,11 @@
 {
   "domain": "aquafeast_water_leak",
   "name": "Aquafeast Water Leak",
-  "version": "2.5",
-  "documentation": "https://github.com/bgrabgrabg/aquafeast-water-leak",
-  "issue_tracker": "https://github.com/bgrabgrabg/aquafeast-water-leak/issues",
+  "version": "2.6.3",
+  "documentation": "https://github.com/Aquafeast/Aquafeast-Water-Leak",
+  "issue_tracker": "https://github.com/Aquafeast/Aquafeast-Water-Leak/issues",
   "dependencies": [],
-  "codeowners": ["bgrabgrabg"],
+  "codeowners": ["Aquafeast"],
   "config_flow": true,
   "iot_class": "cloud_polling",
   "requirements": []
