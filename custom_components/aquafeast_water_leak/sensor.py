@@ -138,12 +138,9 @@ async def async_setup_entry(
             AquafeastWaterPressureSensor(entry, api, coordinator),
             AquafeastTotalWaterSensor(entry, api, coordinator),
             AquafeastBatteryLevelSensor(entry, api, coordinator),
-            AquafeastPowerSupplyStatusSensor(entry, api, coordinator),
-            AquafeastLastModeSensor(entry, api, coordinator),
-            AquafeastAiAdaptiveSensor(entry, api, coordinator),
             AquafeastFaultStatusSensor(entry, api, coordinator),
             AquafeastFaultCodeSensor(entry, api, coordinator),
-            AquafeastRawStatusSensor(entry, api, coordinator),
+            
         ]
     )
 
