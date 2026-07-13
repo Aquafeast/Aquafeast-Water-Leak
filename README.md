@@ -12,7 +12,6 @@ Custom HACS integration for **Aquafeast** Water Leak Sensor with valve control.
 - Valve open/close control
 - Automatic entity creation (Sensor + Valve)
 - Easy configuration via UI
-- Works with the public BRISK API
 
 ## Installation
 
@@ -40,8 +39,7 @@ Category: **Integration**
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Aquafeast Water Leak**
 3. Fill in:
-- **Name**: Friendly name for the device
-- **Device ID**: Your device ID (example: `402A8F72D32A`)
+
 - **MAC Address** (optional)
 - **Scan Interval** (seconds, default 30)
 
