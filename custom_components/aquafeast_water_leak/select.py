@@ -24,7 +24,6 @@ MODE_MAP = {
 }
 
 MODE_STATUS_MAP = {
-    2: "UnProtect",
     17: "Mode 1",
     18: "Mode 2",
     19: "Mode 3",
@@ -85,6 +84,9 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
             code = int(raw_value)
         except (TypeError, ValueError):
             return None
+
+        if 1 <== code <== 6:
+            return "UnProtect"
 
         return MODE_STATUS_MAP.get(code)
 
