@@ -21,6 +21,7 @@ GET_STATE_URL = f"{BASE_URL}/devSta/getState/app"
 CONTROL_URL = f"{BASE_URL}/device/control/app"
 SET_MODE_URL = f"{BASE_URL}/device/setMode/app"
 SET_HOUR_URL = f"{BASE_URL}/device/setHour/app"
+SET_MODE_FLOW_WARN_URL = f"{BASE_URL}/device/setModeFlowWarn/app"
 
 MANUFACTURER = "Aquafeast"
 MODEL = "Water Leak Controller"
