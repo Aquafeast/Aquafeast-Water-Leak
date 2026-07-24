@@ -60,7 +60,7 @@ class AquafeastApi:
         return await self.async_send_command("22", str(value))
 
     async def async_set_flush_period(self, days: int):
-        """Set flush period in days."""
+        """Set flush impurity period in days."""
         return await self.async_send_command("17", str(days))
 
     async def async_set_flush_duration(self, seconds: int):
@@ -68,7 +68,7 @@ class AquafeastApi:
         return await self.async_send_command("18", str(seconds))
 
     async def async_manual_flush(self):
-        """Run immediate flush."""
+        """Run immediate/manual flush."""
         return await self.async_send_command("1A", "1")
 
     async def async_set_mode(
