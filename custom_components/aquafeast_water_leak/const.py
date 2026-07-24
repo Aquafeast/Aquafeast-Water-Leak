@@ -4,12 +4,15 @@ DOMAIN = "aquafeast_water_leak"
 DEFAULT_NAME = "Aquafeast Water Leak"
 
 CONF_MAC = "mac_address"
-CONF_DEVICE_MODEL = "device_model"
+CONF_DEVICE_TYPE = "device_type"
 CONF_SCAN_INTERVAL = "scan_interval"
 
-DEFAULT_DEVICE_MODEL = "BSK_BR"
-FILTER_DEVICE_MODEL = "BSK_BR_FILTER"
 DEFAULT_SCAN_INTERVAL = 30
+
+DEVICE_TYPE_LEAKAGE_PROTECTOR = "leakage_protector"
+DEVICE_TYPE_FILTER = "leakage_protector_pre_filter"
+
+API_DEVICE_MODEL = "BSK_BR"
 
 CAP_FILTER = "filter_features"
 
