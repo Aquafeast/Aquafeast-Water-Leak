@@ -11,21 +11,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import AquafeastApi
 from .const import (
-    CAP_AI_ADAPTIVE,
     CAP_FILTER,
     CONF_DEVICE_MODEL,
     CONF_MAC,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    KEY_AI_ADAPTIVE,
+    FILTER_DEVICE_MODEL,
     KEY_DATA,
-    KEY_DEVICE_MODEL,
-    KEY_FLUSH_DURATION,
-    KEY_FLUSH_PERIOD,
-    KEY_FLUSH_STATUS,
-    KEY_NEXT_FLUSH_HOURS,
-    MODEL_LEAK_PROTECTOR_FILTER,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -42,8 +35,7 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             entry_data[CONF_MAC],
             entry_data[CONF_DEVICE_MODEL],
         )
-        self.model_code: int | None = None
-        self.capabilities: set[str] = set()
+        self.capabilities: set[str] = self._detect_capabilities()
 
         scan_interval = entry_data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
@@ -54,8 +46,17 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             update_interval=timedelta(seconds=scan_interval),
         )
 
+    def _detect_capabilities(self) -> set[str]:
+        """Detect supported capabilities from configured model only."""
+        caps: set[str] = set()
+
+        if self.entry_data.get(CONF_DEVICE_MODEL) == FILTER_DEVICE_MODEL:
+            caps.add(CAP_FILTER)
+
+        return caps
+
     def _state_payload(self, payload: dict | None = None) -> dict[str, Any]:
-        """Return the nested data payload."""
+        """Return nested device payload."""
         source = payload if payload is not None else self.data
         if not isinstance(source, dict):
             return {}
@@ -66,23 +67,19 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
 
         return {}
 
-    @staticmethod
-    def _as_int(value: Any) -> int | None:
-        """Convert raw API value to int when possible."""
-        if value in (None, "", "-"):
-            return None
-        try:
-            return int(str(value))
-        except (TypeError, ValueError):
-            return None
-
     def get_value(self, key: str, default: Any = None) -> Any:
         """Get raw value from nested device data."""
         return self._state_payload().get(key, default)
 
     def get_int(self, key: str) -> int | None:
         """Get integer value from nested device data."""
-        return self._as_int(self.get_value(key))
+        value = self.get_value(key)
+        if value in (None, "", "-", "--"):
+            return None
+        try:
+            return int(str(value))
+        except (TypeError, ValueError):
+            return None
 
     def get_scaled(self, key: str, divisor: float) -> float | None:
         """Get scaled numeric value."""
@@ -90,47 +87,6 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         if raw is None:
             return None
         return raw / divisor
-
-    def detect_model_code(self, payload: dict | None = None) -> int | None:
-        """Detect device model code."""
-        data = self._state_payload(payload)
-        model = self._as_int(data.get(KEY_DEVICE_MODEL))
-        if model is not None:
-            return model
-
-        filter_keys = (
-            KEY_FLUSH_PERIOD,
-            KEY_FLUSH_DURATION,
-            KEY_NEXT_FLUSH_HOURS,
-            KEY_FLUSH_STATUS,
-        )
-        if any(data.get(key) not in (None, "", "-") for key in filter_keys):
-            return MODEL_LEAK_PROTECTOR_FILTER
-
-        return None
-
-    def detect_capabilities(self, payload: dict | None = None) -> set[str]:
-        """Detect supported capabilities from payload."""
-        data = self._state_payload(payload)
-        caps: set[str] = set()
-
-        model = self.detect_model_code(payload)
-        if model == MODEL_LEAK_PROTECTOR_FILTER:
-            caps.add(CAP_FILTER)
-
-        filter_keys = (
-            KEY_FLUSH_PERIOD,
-            KEY_FLUSH_DURATION,
-            KEY_NEXT_FLUSH_HOURS,
-            KEY_FLUSH_STATUS,
-        )
-        if any(data.get(key) not in (None, "", "-") for key in filter_keys):
-            caps.add(CAP_FILTER)
-
-        if data.get(KEY_AI_ADAPTIVE) not in (None, "", "-"):
-            caps.add(CAP_AI_ADAPTIVE)
-
-        return caps
 
     def has_capability(self, capability: str) -> bool:
         """Return True if device supports capability."""
@@ -144,9 +100,7 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
             if data.get("resCode") not in (None, "0", 0):
                 raise UpdateFailed(f"API error: {data.get('resMsg')}")
 
-            self.model_code = self.detect_model_code(data)
-            self.capabilities = self.detect_capabilities(data)
-
+            self.capabilities = self._detect_capabilities()
             return data
 
         except Exception as err:
