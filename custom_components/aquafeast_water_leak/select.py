@@ -11,26 +11,25 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_MAC, DOMAIN, MANUFACTURER, MODEL
+from .const import CONF_MAC, DOMAIN, KEY_MODE, MANUFACTURER, MODEL
+
 
 MODE_MAP = {
-    "UnProtect": 1,
-    "Mode 1": 17,
-    "Mode 2": 18,
-    "Mode 3": 19,
-    "Mode 4": 20,
-    "Mode 5": 21,
-    "Mode 6": 22,
+    "Unprotect Mode 1": 0x01,
+    "Unprotect Mode 2": 0x02,
+    "Unprotect Mode 3": 0x03,
+    "Unprotect Mode 4": 0x04,
+    "Unprotect Mode 5": 0x05,
+    "Unprotect Mode 6": 0x06,
+    "Protect Mode 1": 0x11,
+    "Protect Mode 2": 0x12,
+    "Protect Mode 3": 0x13,
+    "Protect Mode 4": 0x14,
+    "Protect Mode 5": 0x15,
+    "Protect Mode 6": 0x16,
 }
 
-MODE_STATUS_MAP = {
-    17: "Mode 1",
-    18: "Mode 2",
-    19: "Mode 3",
-    20: "Mode 4",
-    21: "Mode 5",
-    22: "Mode 6",
-}
+MODE_STATUS_MAP = {value: key for key, value in MODE_MAP.items()}
 
 
 async def async_setup_entry(
@@ -44,9 +43,7 @@ async def async_setup_entry(
     coordinator = stored["coordinator"]
 
     async_add_entities(
-        [
-            AquafeastOperationModeSelect(entry, api, coordinator),
-        ]
+        [AquafeastOperationModeSelect(entry, api, coordinator)]
     )
 
 
@@ -74,20 +71,9 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Return current operation mode."""
-        data = self.coordinator.data.get("data", {})
-        raw_value = data.get("data02")
-
-        if raw_value is None:
+        code = self.coordinator.get_int(KEY_MODE)
+        if code is None:
             return None
-
-        try:
-            code = int(raw_value)
-        except (TypeError, ValueError):
-            return None
-
-        if 1 <= code <= 6:
-            return "UnProtect"
-
         return MODE_STATUS_MAP.get(code)
 
     async def async_select_option(self, option: str) -> None:
