@@ -46,7 +46,7 @@ MODE_STATUS_MAP = {
 
 
 def _mode_defaults_for_target(coordinator, mode_code: int) -> tuple[int, int | None]:
-    """Return flow/hour values for the target mode."""
+    """Return saved flow/hour defaults for target mode."""
     if mode_code == 20:
         flow_set = coordinator.get_int(KEY_MODE4_WARNING_FLOW) or 0
         hour_set = coordinator.get_int(KEY_MODE4_HOURS) or 0
@@ -86,7 +86,6 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
     _attr_options = list(MODE_MAP.keys())
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize the select entity."""
         super().__init__(coordinator)
         self._entry = entry
         self._api = api
