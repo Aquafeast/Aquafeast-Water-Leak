@@ -31,12 +31,12 @@ from .const import (
 
 
 def _mode_code(coordinator) -> int | None:
-    """Return current mode code."""
+    """Return current raw mode code."""
     return coordinator.get_int(KEY_MODE)
 
 
 def _base_mode(coordinator) -> int | None:
-    """Normalize mode 0x11..0x16 to base 1..6."""
+    """Normalize 0x11..0x16 to 1..6."""
     mode = _mode_code(coordinator)
     if mode is None:
         return None
@@ -46,12 +46,12 @@ def _base_mode(coordinator) -> int | None:
 
 
 def _is_professional_mode(coordinator) -> bool:
-    """Return True for mode 4/5/6."""
+    """Return True for mode 4, 5, 6."""
     return _base_mode(coordinator) in (4, 5, 6)
 
 
 def _warning_time_key(coordinator) -> str | None:
-    """Return active warning time key."""
+    """Return time key for current mode."""
     return {
         4: KEY_MODE4_HOURS,
         5: KEY_MODE5_HOURS,
@@ -60,7 +60,7 @@ def _warning_time_key(coordinator) -> str | None:
 
 
 def _warning_flow_key(coordinator) -> str | None:
-    """Return active warning flow key."""
+    """Return flow key for current mode."""
     return {
         4: KEY_MODE4_WARNING_FLOW,
         5: KEY_MODE5_WARNING_FLOW,
@@ -101,7 +101,6 @@ class AquafeastBaseNumber(CoordinatorEntity, NumberEntity):
     _attr_has_entity_name = True
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize base number."""
         super().__init__(coordinator)
         self._entry = entry
         self._api = api
@@ -121,38 +120,31 @@ class AquafeastWarningTimeNumber(AquafeastBaseNumber):
     _attr_mode = "slider"
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize warning time."""
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_warning_time"
 
     @property
     def available(self) -> bool:
-        """Return availability."""
         return super().available and _is_professional_mode(self.coordinator)
 
     @property
     def native_unit_of_measurement(self):
-        """Return unit."""
         return "h"
 
     @property
     def native_min_value(self) -> float:
-        """Return min."""
-        return 0.1
+        return 1.0
 
     @property
     def native_max_value(self) -> float:
-        """Return max."""
-        return 24.0
+        return 3.0
 
     @property
     def native_step(self) -> float:
-        """Return step."""
         return 0.1
 
     @property
     def native_value(self) -> float | None:
-        """Return warning time in hours."""
         key = _warning_time_key(self.coordinator)
         if key is None:
             return None
@@ -164,7 +156,6 @@ class AquafeastWarningTimeNumber(AquafeastBaseNumber):
         return round(raw / 3600, 1)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set warning time."""
         mode = _mode_code(self.coordinator)
         flow_key = _warning_flow_key(self.coordinator)
 
@@ -186,38 +177,31 @@ class AquafeastWarningWaterNumber(AquafeastBaseNumber):
     _attr_mode = "slider"
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize warning water."""
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_warning_water"
 
     @property
     def available(self) -> bool:
-        """Return availability."""
         return super().available and _is_professional_mode(self.coordinator)
 
     @property
     def native_unit_of_measurement(self):
-        """Return unit."""
         return "m³"
 
     @property
     def native_min_value(self) -> float:
-        """Return min."""
         return 0.1
 
     @property
     def native_max_value(self) -> float:
-        """Return max."""
         return 5.0
 
     @property
     def native_step(self) -> float:
-        """Return step."""
         return 0.1
 
     @property
     def native_value(self) -> float | None:
-        """Return warning water in m³."""
         key = _warning_flow_key(self.coordinator)
         if key is None:
             return None
@@ -229,7 +213,6 @@ class AquafeastWarningWaterNumber(AquafeastBaseNumber):
         return round(raw / 10, 1)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set warning water."""
         mode = _mode_code(self.coordinator)
         time_key = _warning_time_key(self.coordinator)
 
@@ -251,13 +234,11 @@ class AquafeastWarningMinimumFlowNumber(AquafeastBaseNumber):
     _attr_mode = "slider"
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize warning minimum flow."""
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_warning_minimum_flow"
 
     @property
     def available(self) -> bool:
-        """Return availability."""
         return super().available and self.coordinator.get_value(KEY_WARNING_MIN_FLOW) not in (
             None,
             "",
@@ -267,31 +248,25 @@ class AquafeastWarningMinimumFlowNumber(AquafeastBaseNumber):
 
     @property
     def native_unit_of_measurement(self):
-        """Return unit."""
         return "L/hr"
 
     @property
     def native_min_value(self) -> float:
-        """Return min."""
         return 1.0
 
     @property
     def native_max_value(self) -> float:
-        """Return max."""
         return 20.0
 
     @property
     def native_step(self) -> float:
-        """Return step."""
         return 0.5
 
     @property
     def native_value(self) -> float | None:
-        """Return warning minimum flow."""
         return self.coordinator.get_scaled(KEY_WARNING_MIN_FLOW, 10)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set warning minimum flow."""
         await self._api.async_set_warning_minimum_flow(value)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
@@ -304,13 +279,11 @@ class AquafeastFlushPeriodNumber(AquafeastBaseNumber):
     _attr_mode = "slider"
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize flush period."""
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_flush_impurity_period"
 
     @property
     def available(self) -> bool:
-        """Return availability."""
         return (
             super().available
             and self.coordinator.has_capability(CAP_FILTER)
@@ -319,32 +292,26 @@ class AquafeastFlushPeriodNumber(AquafeastBaseNumber):
 
     @property
     def native_unit_of_measurement(self):
-        """Return unit."""
         return "d"
 
     @property
     def native_min_value(self) -> float:
-        """Return min."""
         return 0
 
     @property
     def native_max_value(self) -> float:
-        """Return max."""
         return 90
 
     @property
     def native_step(self) -> float:
-        """Return step."""
         return 1
 
     @property
     def native_value(self) -> float | None:
-        """Return flush period."""
         value = self.coordinator.get_int(KEY_FLUSH_PERIOD)
         return None if value is None else float(value)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set flush period."""
         await self._api.async_set_flush_period(int(value))
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
@@ -357,13 +324,11 @@ class AquafeastFlushDurationNumber(AquafeastBaseNumber):
     _attr_mode = "slider"
 
     def __init__(self, entry, api, coordinator) -> None:
-        """Initialize flush duration."""
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_flush_duration"
 
     @property
     def available(self) -> bool:
-        """Return availability."""
         return (
             super().available
             and self.coordinator.has_capability(CAP_FILTER)
@@ -372,32 +337,26 @@ class AquafeastFlushDurationNumber(AquafeastBaseNumber):
 
     @property
     def native_unit_of_measurement(self):
-        """Return unit."""
         return "s"
 
     @property
     def native_min_value(self) -> float:
-        """Return min."""
         return 5
 
     @property
     def native_max_value(self) -> float:
-        """Return max."""
         return 120
 
     @property
     def native_step(self) -> float:
-        """Return step."""
         return 1
 
     @property
     def native_value(self) -> float | None:
-        """Return flush duration."""
         value = self.coordinator.get_int(KEY_FLUSH_DURATION)
         return None if value is None else float(value)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Set flush duration."""
         await self._api.async_set_flush_duration(int(value))
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
