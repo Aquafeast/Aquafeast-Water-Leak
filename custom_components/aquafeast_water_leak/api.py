@@ -6,7 +6,12 @@ import aiohttp
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import CONTROL_URL, GET_STATE_URL, SET_HOUR_URL, SET_MODE_URL
+from .const import (
+    CONTROL_URL,
+    GET_STATE_URL,
+    SET_HOUR_URL,
+    SET_MODE_URL,
+)
 
 
 class AquafeastApi:
@@ -14,7 +19,9 @@ class AquafeastApi:
 
     def __init__(self, hass, mac_address: str, device_model: str) -> None:
         self.hass = hass
-        self.mac_address = mac_address.strip().replace(":", "").replace("-", "").upper()
+        self.mac_address = (
+            mac_address.strip().replace(":", "").replace("-", "").upper()
+        )
         self.device_model = device_model
 
     async def async_get_state(self) -> dict:
@@ -50,30 +57,12 @@ class AquafeastApi:
             except Exception:
                 return {"raw": text}
 
-    async def async_set_valve(self, open_valve: bool):
-        """Set valve state."""
-        return await self.async_send_command("01", "1" if open_valve else "0")
-
     async def async_set_warning_minimum_flow(self, flow_lph: float):
         """Set warning minimum flow in L/hr."""
         value = int(round(flow_lph * 10))
         return await self.async_send_command("22", str(value))
 
-    async def async_set_flush_period(self, days: int):
-        """Set flush impurity period in days."""
-        return await self.async_send_command("17", str(days))
-
-    async def async_set_flush_duration(self, seconds: int):
-        """Set flush duration in seconds."""
-        return await self.async_send_command("18", str(seconds))
-
-    async def async_manual_flush(self):
-        """Run immediate/manual flush."""
-        return await self.async_send_command("1A", "1")
-
-    async def async_set_mode(
-        self, mode: int, flow_set: int = 0, hour_set: float | None = None
-    ):
+    async def async_set_mode(self, mode: int, flow_set: int = 0, hour_set: float | None = None):
         """Set operation mode."""
         params = {
             "strMac": self.mac_address,
@@ -88,6 +77,27 @@ class AquafeastApi:
         timeout = aiohttp.ClientTimeout(total=15)
 
         async with session.get(SET_MODE_URL, params=params, timeout=timeout) as response:
+            response.raise_for_status()
+            text = await response.text()
+            try:
+                return await response.json(content_type=None)
+            except Exception:
+                return {"raw": text}
+
+    async def async_set_mode_flow_warn(self, mode: int, flow_set: int, hour_set: float):
+        """Set warning flow/time for mode 4/5/6."""
+        params = {
+            "strMac": self.mac_address,
+            "mode": str(mode),
+            "flowSet": str(flow_set),
+            "hourSet": f"{hour_set:.1f}",
+        }
+
+        session = async_get_clientsession(self.hass)
+        timeout = aiohttp.ClientTimeout(total=15)
+        url = "https://interface.briskworld.com/device/setModeFlowWarn/app"
+
+        async with session.get(url, params=params, timeout=timeout) as response:
             response.raise_for_status()
             text = await response.text()
             try:
