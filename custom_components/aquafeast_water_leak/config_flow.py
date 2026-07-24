@@ -15,6 +15,11 @@ from .const import (
     DOMAIN,
 )
 
+DEVICE_MODEL_OPTIONS = {
+    "BSK_BR": "Aquafeast / Briskworld default",
+    "BSK_BR_FILTER": "Aquafeast filter model",
+}
+
 
 class AquafeastWaterLeakConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Aquafeast Water Leak."""
@@ -26,8 +31,6 @@ class AquafeastWaterLeakConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            user_input[CONF_DEVICE_MODEL] = DEFAULT_DEVICE_MODEL
-
             await self.async_set_unique_id(
                 user_input[CONF_MAC].replace(":", "").replace("-", "").lower()
             )
@@ -41,7 +44,14 @@ class AquafeastWaterLeakConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_MAC): str,
-                vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
+                vol.Optional(
+                    CONF_DEVICE_MODEL,
+                    default=DEFAULT_DEVICE_MODEL,
+                ): vol.In(list(DEVICE_MODEL_OPTIONS.keys())),
+                vol.Optional(
+                    CONF_SCAN_INTERVAL,
+                    default=DEFAULT_SCAN_INTERVAL,
+                ): int,
             }
         )
 
