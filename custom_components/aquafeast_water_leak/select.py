@@ -11,25 +11,58 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_MAC, DOMAIN, KEY_MODE, MANUFACTURER, MODEL
-
+from .const import (
+    CONF_MAC,
+    DOMAIN,
+    KEY_MODE,
+    KEY_MODE4_HOURS,
+    KEY_MODE4_WARNING_FLOW,
+    KEY_MODE5_HOURS,
+    KEY_MODE5_WARNING_FLOW,
+    KEY_MODE6_HOURS,
+    KEY_MODE6_WARNING_FLOW,
+    MANUFACTURER,
+    MODEL,
+)
 
 MODE_MAP = {
-    "Unprotect Mode 1": 0x01,
-    "Unprotect Mode 2": 0x02,
-    "Unprotect Mode 3": 0x03,
-    "Unprotect Mode 4": 0x04,
-    "Unprotect Mode 5": 0x05,
-    "Unprotect Mode 6": 0x06,
-    "Protect Mode 1": 0x11,
-    "Protect Mode 2": 0x12,
-    "Protect Mode 3": 0x13,
-    "Protect Mode 4": 0x14,
-    "Protect Mode 5": 0x15,
-    "Protect Mode 6": 0x16,
+    "Unprotect": 1,
+    "Mode 1": 17,
+    "Mode 2": 18,
+    "Mode 3": 19,
+    "Mode 4": 20,
+    "Mode 5": 21,
+    "Mode 6": 22,
 }
 
-MODE_STATUS_MAP = {value: key for key, value in MODE_MAP.items()}
+MODE_STATUS_MAP = {
+    17: "Mode 1",
+    18: "Mode 2",
+    19: "Mode 3",
+    20: "Mode 4",
+    21: "Mode 5",
+    22: "Mode 6",
+}
+
+
+def _mode_defaults_for_target(coordinator, mode_code: int) -> tuple[int, int | None]:
+    """Return flow/hour values for the target mode."""
+    if mode_code == 20:
+        flow_set = coordinator.get_int(KEY_MODE4_WARNING_FLOW) or 0
+        hour_set = coordinator.get_int(KEY_MODE4_HOURS) or 0
+        return flow_set, hour_set
+
+    if mode_code == 21:
+        flow_set = coordinator.get_int(KEY_MODE5_WARNING_FLOW) or 0
+        hour_set = coordinator.get_int(KEY_MODE5_HOURS) or 0
+        return flow_set, hour_set
+
+    if mode_code == 22:
+        flow_set = coordinator.get_int(KEY_MODE6_WARNING_FLOW) or 0
+        hour_set = coordinator.get_int(KEY_MODE6_HOURS) or 0
+        return flow_set, hour_set
+
+    return 0, None
 
 
 async def async_setup_entry(
@@ -42,9 +75,7 @@ async def async_setup_entry(
     api = stored["api"]
     coordinator = stored["coordinator"]
 
-    async_add_entities(
-        [AquafeastOperationModeSelect(entry, api, coordinator)]
-    )
+    async_add_entities([AquafeastOperationModeSelect(entry, api, coordinator)])
 
 
 class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
@@ -72,8 +103,13 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
     def current_option(self) -> str | None:
         """Return current operation mode."""
         code = self.coordinator.get_int(KEY_MODE)
+
         if code is None:
             return None
+
+        if 1 <= code <= 6:
+            return "Unprotect"
+
         return MODE_STATUS_MAP.get(code)
 
     async def async_select_option(self, option: str) -> None:
@@ -82,6 +118,7 @@ class AquafeastOperationModeSelect(CoordinatorEntity, SelectEntity):
         if mode_code is None:
             return
 
-        await self._api.async_set_mode(mode_code, flow_set=0)
+        flow_set, hour_set = _mode_defaults_for_target(self.coordinator, mode_code)
+        await self._api.async_set_mode(mode_code, flow_set=flow_set, hour_set=hour_set)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
