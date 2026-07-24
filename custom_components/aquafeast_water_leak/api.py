@@ -60,7 +60,7 @@ class AquafeastApi:
         return await self.async_send_command("22", str(value))
 
     async def async_set_flush_period(self, days: int):
-        """Set sewage/flush cycle in days."""
+        """Set flush period in days."""
         return await self.async_send_command("17", str(days))
 
     async def async_set_flush_duration(self, seconds: int):
@@ -68,16 +68,8 @@ class AquafeastApi:
         return await self.async_send_command("18", str(seconds))
 
     async def async_manual_flush(self):
-        """Run immediate/manual flush."""
+        """Run immediate flush."""
         return await self.async_send_command("1A", "1")
-
-    async def async_reset_device(self, reset_type: int = 0):
-        """Reset device."""
-        return await self.async_send_command("26", str(reset_type))
-
-    async def async_set_ai_adaptive(self, enabled: bool):
-        """Set AI adaptive mode."""
-        return await self.async_send_command("28", "1" if enabled else "0")
 
     async def async_set_mode(
         self, mode: int, flow_set: int = 0, hour_set: float | None = None
