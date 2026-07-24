@@ -28,7 +28,6 @@ async def async_setup_entry(
 
     entities: list[ButtonEntity] = [
         AquafeastSyncClockButton(entry, api, coordinator),
-        AquafeastResetDeviceButton(entry, api, coordinator),
     ]
 
     if coordinator.has_capability(CAP_FILTER):
@@ -95,24 +94,5 @@ class AquafeastManualFlushButton(AquafeastBaseButton):
     async def async_press(self) -> None:
         """Start immediate flush."""
         await self._api.async_manual_flush()
-        await asyncio.sleep(2)
-        await self.coordinator.async_request_refresh()
-
-
-class AquafeastResetDeviceButton(AquafeastBaseButton):
-    """Reset device button."""
-
-    _attr_name = "reset device"
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_icon = "mdi:restart"
-
-    def __init__(self, entry, api, coordinator) -> None:
-        """Initialize reset device button."""
-        super().__init__(entry, api, coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_reset_device"
-
-    async def async_press(self) -> None:
-        """Reset device."""
-        await self._api.async_reset_device(0)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
