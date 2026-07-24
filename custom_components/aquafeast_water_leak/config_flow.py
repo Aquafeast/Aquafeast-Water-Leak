@@ -17,8 +17,8 @@ from .const import (
 )
 
 DEVICE_MODEL_OPTIONS = {
-    DEFAULT_DEVICE_MODEL: "Small device",
-    FILTER_DEVICE_MODEL: "Filter device",
+    DEFAULT_DEVICE_MODEL: "Leakage protector",
+    FILTER_DEVICE_MODEL: "Leakage protector + pre-filter",
 }
 
 
