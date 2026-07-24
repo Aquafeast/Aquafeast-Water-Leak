@@ -13,11 +13,12 @@ from .const import (
     DEFAULT_DEVICE_MODEL,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    FILTER_DEVICE_MODEL,
 )
 
 DEVICE_MODEL_OPTIONS = {
-    "BSK_BR": "Aquafeast / Briskworld default",
-    "BSK_BR_FILTER": "Aquafeast filter model",
+    DEFAULT_DEVICE_MODEL: "Small device",
+    FILTER_DEVICE_MODEL: "Filter device",
 }
 
 
