@@ -47,7 +47,7 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         )
 
     def _detect_capabilities(self) -> set[str]:
-        """Detect supported capabilities from configured model only."""
+        """Detect capabilities from configured model only."""
         caps: set[str] = set()
 
         if self.entry_data.get(CONF_DEVICE_MODEL) == FILTER_DEVICE_MODEL:
@@ -68,11 +68,11 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         return {}
 
     def get_value(self, key: str, default: Any = None) -> Any:
-        """Get raw value from nested device data."""
+        """Get raw value from nested payload."""
         return self._state_payload().get(key, default)
 
     def get_int(self, key: str) -> int | None:
-        """Get integer value from nested device data."""
+        """Get integer value from nested payload."""
         value = self.get_value(key)
         if value in (None, "", "-", "--"):
             return None
@@ -89,7 +89,7 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         return raw / divisor
 
     def has_capability(self, capability: str) -> bool:
-        """Return True if device supports capability."""
+        """Return True if device supports a capability."""
         return capability in self.capabilities
 
     async def _async_update_data(self) -> dict:
