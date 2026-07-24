@@ -36,7 +36,7 @@ def _mode_code(coordinator) -> int | None:
 
 
 def _base_mode(coordinator) -> int | None:
-    """Normalize 0x11..0x16 to 1..6."""
+    """Normalize mode to 1..6."""
     mode = _mode_code(coordinator)
     if mode is None:
         return None
@@ -51,7 +51,7 @@ def _is_professional_mode(coordinator) -> bool:
 
 
 def _warning_time_key(coordinator) -> str | None:
-    """Return time key for current mode."""
+    """Return warning time key for current mode."""
     return {
         4: KEY_MODE4_HOURS,
         5: KEY_MODE5_HOURS,
@@ -60,7 +60,7 @@ def _warning_time_key(coordinator) -> str | None:
 
 
 def _warning_flow_key(coordinator) -> str | None:
-    """Return flow key for current mode."""
+    """Return warning flow key for current mode."""
     return {
         4: KEY_MODE4_WARNING_FLOW,
         5: KEY_MODE5_WARNING_FLOW,
@@ -96,7 +96,7 @@ async def async_setup_entry(
 
 
 class AquafeastBaseNumber(CoordinatorEntity, NumberEntity):
-    """Base number entity."""
+    """Base Aquafeast number entity."""
 
     _attr_has_entity_name = True
 
@@ -114,7 +114,7 @@ class AquafeastBaseNumber(CoordinatorEntity, NumberEntity):
 
 
 class AquafeastWarningTimeNumber(AquafeastBaseNumber):
-    """Warning time number for mode 4/5/6."""
+    """Warning time number entity for mode 4/5/6."""
 
     _attr_name = "warning time"
     _attr_mode = "slider"
@@ -125,6 +125,7 @@ class AquafeastWarningTimeNumber(AquafeastBaseNumber):
 
     @property
     def available(self) -> bool:
+        """Return if entity is available."""
         return super().available and _is_professional_mode(self.coordinator)
 
     @property
@@ -145,6 +146,7 @@ class AquafeastWarningTimeNumber(AquafeastBaseNumber):
 
     @property
     def native_value(self) -> float | None:
+        """Return warning time in hours."""
         key = _warning_time_key(self.coordinator)
         if key is None:
             return None
@@ -156,22 +158,26 @@ class AquafeastWarningTimeNumber(AquafeastBaseNumber):
         return round(raw / 3600, 1)
 
     async def async_set_native_value(self, value: float) -> None:
-        mode = _mode_code(self.coordinator)
+        """Set warning time in hours."""
+        mode = _base_mode(self.coordinator)
         flow_key = _warning_flow_key(self.coordinator)
 
-        if mode is None or flow_key is None:
+        if mode not in (4, 5, 6) or flow_key is None:
             return
 
         current_flow = self.coordinator.get_int(flow_key) or 0
-        hour_set = int(round(value * 3600))
 
-        await self._api.async_set_mode(mode, flow_set=current_flow, hour_set=hour_set)
+        await self._api.async_set_mode_flow_warn(
+            mode=mode,
+            flow_set=current_flow,
+            hour_set=round(value, 1),
+        )
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
 
 
 class AquafeastWarningWaterNumber(AquafeastBaseNumber):
-    """Warning water number for mode 4/5/6."""
+    """Warning water number entity for mode 4/5/6."""
 
     _attr_name = "warning water"
     _attr_mode = "slider"
@@ -182,6 +188,7 @@ class AquafeastWarningWaterNumber(AquafeastBaseNumber):
 
     @property
     def available(self) -> bool:
+        """Return if entity is available."""
         return super().available and _is_professional_mode(self.coordinator)
 
     @property
@@ -202,6 +209,7 @@ class AquafeastWarningWaterNumber(AquafeastBaseNumber):
 
     @property
     def native_value(self) -> float | None:
+        """Return warning water in m³."""
         key = _warning_flow_key(self.coordinator)
         if key is None:
             return None
@@ -213,22 +221,28 @@ class AquafeastWarningWaterNumber(AquafeastBaseNumber):
         return round(raw / 10, 1)
 
     async def async_set_native_value(self, value: float) -> None:
-        mode = _mode_code(self.coordinator)
+        """Set warning water in m³."""
+        mode = _base_mode(self.coordinator)
         time_key = _warning_time_key(self.coordinator)
 
-        if mode is None or time_key is None:
+        if mode not in (4, 5, 6) or time_key is None:
             return
 
-        current_hour = self.coordinator.get_int(time_key) or 0
+        current_time_raw = self.coordinator.get_int(time_key)
+        current_hour = round((current_time_raw or 3600) / 3600, 1)
         flow_set = int(round(value * 10))
 
-        await self._api.async_set_mode(mode, flow_set=flow_set, hour_set=current_hour)
+        await self._api.async_set_mode_flow_warn(
+            mode=mode,
+            flow_set=flow_set,
+            hour_set=current_hour,
+        )
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
 
 
 class AquafeastWarningMinimumFlowNumber(AquafeastBaseNumber):
-    """Warning minimum flow number."""
+    """Warning minimum flow number entity."""
 
     _attr_name = "warning minimum flow"
     _attr_mode = "slider"
@@ -239,6 +253,7 @@ class AquafeastWarningMinimumFlowNumber(AquafeastBaseNumber):
 
     @property
     def available(self) -> bool:
+        """Return if entity is available."""
         return super().available and self.coordinator.get_value(KEY_WARNING_MIN_FLOW) not in (
             None,
             "",
@@ -264,16 +279,18 @@ class AquafeastWarningMinimumFlowNumber(AquafeastBaseNumber):
 
     @property
     def native_value(self) -> float | None:
+        """Return current warning minimum flow."""
         return self.coordinator.get_scaled(KEY_WARNING_MIN_FLOW, 10)
 
     async def async_set_native_value(self, value: float) -> None:
+        """Set warning minimum flow."""
         await self._api.async_set_warning_minimum_flow(value)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
 
 
 class AquafeastFlushPeriodNumber(AquafeastBaseNumber):
-    """Flush impurity period."""
+    """Flush impurity period number entity."""
 
     _attr_name = "flush impurity period"
     _attr_mode = "slider"
@@ -284,6 +301,7 @@ class AquafeastFlushPeriodNumber(AquafeastBaseNumber):
 
     @property
     def available(self) -> bool:
+        """Return if entity is available."""
         return (
             super().available
             and self.coordinator.has_capability(CAP_FILTER)
@@ -308,17 +326,19 @@ class AquafeastFlushPeriodNumber(AquafeastBaseNumber):
 
     @property
     def native_value(self) -> float | None:
+        """Return flush period in days."""
         value = self.coordinator.get_int(KEY_FLUSH_PERIOD)
         return None if value is None else float(value)
 
     async def async_set_native_value(self, value: float) -> None:
+        """Set flush period."""
         await self._api.async_set_flush_period(int(value))
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
 
 
 class AquafeastFlushDurationNumber(AquafeastBaseNumber):
-    """Flush duration."""
+    """Flush duration number entity."""
 
     _attr_name = "flush duration"
     _attr_mode = "slider"
@@ -329,6 +349,7 @@ class AquafeastFlushDurationNumber(AquafeastBaseNumber):
 
     @property
     def available(self) -> bool:
+        """Return if entity is available."""
         return (
             super().available
             and self.coordinator.has_capability(CAP_FILTER)
@@ -353,10 +374,12 @@ class AquafeastFlushDurationNumber(AquafeastBaseNumber):
 
     @property
     def native_value(self) -> float | None:
+        """Return flush duration in seconds."""
         value = self.coordinator.get_int(KEY_FLUSH_DURATION)
         return None if value is None else float(value)
 
     async def async_set_native_value(self, value: float) -> None:
+        """Set flush duration."""
         await self._api.async_set_flush_duration(int(value))
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
