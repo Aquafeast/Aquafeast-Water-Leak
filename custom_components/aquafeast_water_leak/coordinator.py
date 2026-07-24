@@ -11,13 +11,14 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .api import AquafeastApi
 from .const import (
+    API_DEVICE_MODEL,
     CAP_FILTER,
-    CONF_DEVICE_MODEL,
+    CONF_DEVICE_TYPE,
     CONF_MAC,
     CONF_SCAN_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
+    DEVICE_TYPE_FILTER,
     DOMAIN,
-    FILTER_DEVICE_MODEL,
     KEY_DATA,
 )
 
@@ -33,7 +34,7 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         self.api = AquafeastApi(
             hass,
             entry_data[CONF_MAC],
-            entry_data[CONF_DEVICE_MODEL],
+            API_DEVICE_MODEL,
         )
         self.capabilities: set[str] = self._detect_capabilities()
 
@@ -47,10 +48,10 @@ class AquafeastDataUpdateCoordinator(DataUpdateCoordinator[dict]):
         )
 
     def _detect_capabilities(self) -> set[str]:
-        """Detect capabilities from configured model only."""
+        """Detect capabilities from configured device type only."""
         caps: set[str] = set()
 
-        if self.entry_data.get(CONF_DEVICE_MODEL) == FILTER_DEVICE_MODEL:
+        if self.entry_data.get(CONF_DEVICE_TYPE) == DEVICE_TYPE_FILTER:
             caps.add(CAP_FILTER)
 
         return caps
