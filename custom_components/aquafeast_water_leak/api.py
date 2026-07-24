@@ -6,20 +6,19 @@ import aiohttp
 
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .const import CONTROL_URL, GET_STATE_URL, SET_HOUR_URL, SET_MODE_URL
+
 
 class AquafeastApi:
     """Simple API client."""
 
     def __init__(self, hass, mac_address: str, device_model: str) -> None:
         self.hass = hass
-        self.mac_address = (
-            mac_address.strip().replace(":", "").replace("-", "").upper()
-        )
+        self.mac_address = mac_address.strip().replace(":", "").replace("-", "").upper()
         self.device_model = device_model
 
     async def async_get_state(self) -> dict:
         """Get current device state."""
-        url = "https://interface.briskworld.com/devSta/getState/app"
         params = {
             "device": self.mac_address,
             "deviceModel": self.device_model,
@@ -28,13 +27,12 @@ class AquafeastApi:
         session = async_get_clientsession(self.hass)
         timeout = aiohttp.ClientTimeout(total=15)
 
-        async with session.get(url, params=params, timeout=timeout) as response:
+        async with session.get(GET_STATE_URL, params=params, timeout=timeout) as response:
             response.raise_for_status()
             return await response.json(content_type=None)
 
     async def async_send_command(self, key: str, value: str):
         """Send generic command to device."""
-        url = "https://interface.briskworld.com/device/control/app"
         params = {
             "strMac": self.mac_address,
             "key": key,
@@ -44,7 +42,7 @@ class AquafeastApi:
         session = async_get_clientsession(self.hass)
         timeout = aiohttp.ClientTimeout(total=15)
 
-        async with session.get(url, params=params, timeout=timeout) as response:
+        async with session.get(CONTROL_URL, params=params, timeout=timeout) as response:
             response.raise_for_status()
             text = await response.text()
             try:
@@ -52,14 +50,39 @@ class AquafeastApi:
             except Exception:
                 return {"raw": text}
 
+    async def async_set_valve(self, open_valve: bool):
+        """Set valve state."""
+        return await self.async_send_command("01", "1" if open_valve else "0")
+
     async def async_set_warning_minimum_flow(self, flow_lph: float):
         """Set warning minimum flow in L/hr."""
         value = int(round(flow_lph * 10))
         return await self.async_send_command("22", str(value))
 
-    async def async_set_mode(self, mode: int, flow_set: int = 0, hour_set: float | None = None):
+    async def async_set_flush_period(self, days: int):
+        """Set sewage/flush cycle in days."""
+        return await self.async_send_command("17", str(days))
+
+    async def async_set_flush_duration(self, seconds: int):
+        """Set flush duration in seconds."""
+        return await self.async_send_command("18", str(seconds))
+
+    async def async_manual_flush(self):
+        """Run immediate/manual flush."""
+        return await self.async_send_command("1A", "1")
+
+    async def async_reset_device(self, reset_type: int = 0):
+        """Reset device."""
+        return await self.async_send_command("26", str(reset_type))
+
+    async def async_set_ai_adaptive(self, enabled: bool):
+        """Set AI adaptive mode."""
+        return await self.async_send_command("28", "1" if enabled else "0")
+
+    async def async_set_mode(
+        self, mode: int, flow_set: int = 0, hour_set: float | None = None
+    ):
         """Set operation mode."""
-        url = "https://interface.briskworld.com/device/setMode/app"
         params = {
             "strMac": self.mac_address,
             "mode": str(mode),
@@ -72,7 +95,7 @@ class AquafeastApi:
         session = async_get_clientsession(self.hass)
         timeout = aiohttp.ClientTimeout(total=15)
 
-        async with session.get(url, params=params, timeout=timeout) as response:
+        async with session.get(SET_MODE_URL, params=params, timeout=timeout) as response:
             response.raise_for_status()
             text = await response.text()
             try:
@@ -80,10 +103,8 @@ class AquafeastApi:
             except Exception:
                 return {"raw": text}
 
-
     async def async_set_clock(self, hour: int, minute: int, second: int):
         """Set device clock."""
-        url = "https://interface.briskworld.com/device/setHour/app"
         params = {
             "strMac": self.mac_address,
             "hour": str(hour),
@@ -94,7 +115,7 @@ class AquafeastApi:
         session = async_get_clientsession(self.hass)
         timeout = aiohttp.ClientTimeout(total=15)
 
-        async with session.get(url, params=params, timeout=timeout) as response:
+        async with session.get(SET_HOUR_URL, params=params, timeout=timeout) as response:
             response.raise_for_status()
             text = await response.text()
             try:
