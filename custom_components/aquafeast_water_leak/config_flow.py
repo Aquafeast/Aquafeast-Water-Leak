@@ -5,21 +5,43 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-
-from .const import (
-    CONF_DEVICE_MODEL,
-    CONF_MAC,
-    CONF_SCAN_INTERVAL,
-    DEFAULT_DEVICE_MODEL,
-    DEFAULT_SCAN_INTERVAL,
-    DOMAIN,
-    FILTER_DEVICE_MODEL,
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
-DEVICE_MODEL_OPTIONS = {
-    DEFAULT_DEVICE_MODEL: "Leakage protector",
-    FILTER_DEVICE_MODEL: "Leakage protector + pre-filter",
+from .const import (
+    CONF_DEVICE_TYPE,
+    CONF_MAC,
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DEVICE_TYPE_FILTER,
+    DEVICE_TYPE_LEAKAGE_PROTECTOR,
+    DOMAIN,
+)
+
+DEVICE_TYPE_TITLES = {
+    DEVICE_TYPE_LEAKAGE_PROTECTOR: "Leakage protector",
+    DEVICE_TYPE_FILTER: "Leakage protector + pre-filter",
 }
+
+DEVICE_TYPE_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[
+            SelectOptionDict(
+                value=DEVICE_TYPE_LEAKAGE_PROTECTOR,
+                label="Leakage protector",
+            ),
+            SelectOptionDict(
+                value=DEVICE_TYPE_FILTER,
+                label="Leakage protector + pre-filter",
+            ),
+        ],
+        mode=SelectSelectorMode.DROPDOWN,
+    )
+)
 
 
 class AquafeastWaterLeakConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -32,23 +54,26 @@ class AquafeastWaterLeakConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(
-                user_input[CONF_MAC].replace(":", "").replace("-", "").lower()
-            )
+            mac = user_input[CONF_MAC].replace(":", "").replace("-", "").lower()
+
+            await self.async_set_unique_id(mac)
             self._abort_if_unique_id_configured()
 
+            device_type = user_input[CONF_DEVICE_TYPE]
+            title = f"{DEVICE_TYPE_TITLES[device_type]} {user_input[CONF_MAC]}"
+
             return self.async_create_entry(
-                title=f"Aquafeast {user_input[CONF_MAC]}",
+                title=title,
                 data=user_input,
             )
 
         data_schema = vol.Schema(
             {
                 vol.Required(CONF_MAC): str,
-                vol.Optional(
-                    CONF_DEVICE_MODEL,
-                    default=DEFAULT_DEVICE_MODEL,
-                ): vol.In(list(DEVICE_MODEL_OPTIONS.keys())),
+                vol.Required(
+                    CONF_DEVICE_TYPE,
+                    default=DEVICE_TYPE_LEAKAGE_PROTECTOR,
+                ): DEVICE_TYPE_SELECTOR,
                 vol.Optional(
                     CONF_SCAN_INTERVAL,
                     default=DEFAULT_SCAN_INTERVAL,
