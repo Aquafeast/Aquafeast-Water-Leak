@@ -57,12 +57,18 @@ class AquafeastApi:
             except Exception:
                 return {"raw": text}
 
+    async def async_set_valve(self, open_valve: bool):
+        """Open or close water valve."""
+        return await self.async_send_command("01", "1" if open_valve else "0")
+
     async def async_set_warning_minimum_flow(self, flow_lph: float):
         """Set warning minimum flow in L/hr."""
         value = int(round(flow_lph * 10))
         return await self.async_send_command("22", str(value))
 
-    async def async_set_mode(self, mode: int, flow_set: int = 0, hour_set: float | None = None):
+    async def async_set_mode(
+        self, mode: int, flow_set: int = 0, hour_set: float | None = None
+    ):
         """Set operation mode."""
         params = {
             "strMac": self.mac_address,
