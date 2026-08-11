@@ -11,6 +11,7 @@ from .const import (
     GET_STATE_URL,
     SET_HOUR_URL,
     SET_MODE_URL,
+    SET_MODE_FLOW_WARN_URL,
 )
 
 
@@ -65,6 +66,19 @@ class AquafeastApi:
         """Run immediate/manual flush."""
         return await self.async_send_command("1A", "1")
 
+    async def async_factory_reset(self):
+        """Reset device to factory defaults."""
+        return await self.async_send_command("26", "1")
+
+    async def async_set_unit_system(self, imperial: bool):
+        """Set measurement system."""
+        return await self.async_send_command("09", "1" if imperial else "0")
+
+    async def async_toggle_unit_system(self, current_value) -> dict:
+        """Toggle measurement system between metric and imperial."""
+        is_imperial = str(current_value) == "1"
+        return await self.async_set_unit_system(not is_imperial)
+
     async def async_set_flush_period(self, days: int):
         """Set flush period in days."""
         return await self.async_send_command("17", str(int(days)))
@@ -104,7 +118,6 @@ class AquafeastApi:
 
     async def async_set_mode_flow_warn(self, mode: int, flow_set: int, hour_set: float):
         """Set warning flow/time for mode 4/5/6."""
-        url = "https://interface.briskworld.com/device/setModeFlowWarn/app"
         params = {
             "strMac": self.mac_address,
             "mode": str(mode),
@@ -115,7 +128,9 @@ class AquafeastApi:
         session = async_get_clientsession(self.hass)
         timeout = aiohttp.ClientTimeout(total=15)
 
-        async with session.get(url, params=params, timeout=timeout) as response:
+        async with session.get(
+            SET_MODE_FLOW_WARN_URL, params=params, timeout=timeout
+        ) as response:
             response.raise_for_status()
             text = await response.text()
             try:
