@@ -24,21 +24,24 @@ async def async_setup_entry(
     api = stored["api"]
     coordinator = stored["coordinator"]
 
-    async_add_entities([AquafeastValveSwitch(entry, api, coordinator)])
+    async_add_entities(
+        [
+            AquafeastValveSwitch(entry, api, coordinator),
+            AquafeastFactoryResetArmSwitch(entry, api, coordinator),
+        ]
+    )
 
 
-class AquafeastValveSwitch(CoordinatorEntity, SwitchEntity):
-    """Valve switch with real state feedback."""
+class AquafeastBaseSwitch(CoordinatorEntity, SwitchEntity):
+    """Base switch entity."""
 
     _attr_has_entity_name = True
-    _attr_name = "water valve"
 
     def __init__(self, entry, api, coordinator) -> None:
         """Initialize the switch."""
         super().__init__(coordinator)
         self._entry = entry
         self._api = api
-        self._attr_unique_id = f"{entry.entry_id}_water_valve"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             manufacturer=MANUFACTURER,
@@ -46,6 +49,17 @@ class AquafeastValveSwitch(CoordinatorEntity, SwitchEntity):
             name=entry.title,
             serial_number=entry.data.get(CONF_MAC),
         )
+
+
+class AquafeastValveSwitch(AquafeastBaseSwitch):
+    """Valve switch with real state feedback."""
+
+    _attr_name = "water valve"
+
+    def __init__(self, entry, api, coordinator) -> None:
+        """Initialize the switch."""
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_water_valve"
 
     @property
     def is_on(self) -> bool | None:
@@ -66,3 +80,28 @@ class AquafeastValveSwitch(CoordinatorEntity, SwitchEntity):
         await self._api.async_set_valve(False)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
+
+
+class AquafeastFactoryResetArmSwitch(AquafeastBaseSwitch):
+    """Temporary arm switch for factory reset."""
+
+    _attr_name = "factory reset arm"
+    _attr_icon = "mdi:shield-alert"
+
+    def __init__(self, entry, api, coordinator) -> None:
+        """Initialize reset arm switch."""
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_factory_reset_arm"
+
+    @property
+    def is_on(self) -> bool:
+        """Return arm state."""
+        return bool(self.coordinator.reset_armed)
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Arm factory reset for a short time."""
+        await self.coordinator.async_set_reset_armed(True, timeout=15)
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Disarm factory reset."""
+        await self.coordinator.async_set_reset_armed(False)
