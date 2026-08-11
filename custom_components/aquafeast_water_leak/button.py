@@ -13,7 +13,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CAP_FILTER, CONF_MAC, DOMAIN, MANUFACTURER, MODEL
+from .const import (
+    CAP_FILTER,
+    CONF_MAC,
+    DOMAIN,
+    KEY_UNIT_SYSTEM,
+    MANUFACTURER,
+    MODEL,
+)
 
 
 async def async_setup_entry(
@@ -28,6 +35,8 @@ async def async_setup_entry(
 
     entities: list[ButtonEntity] = [
         AquafeastSyncClockButton(entry, api, coordinator),
+        AquafeastToggleUnitSystemButton(entry, api, coordinator),
+        AquafeastFactoryResetButton(entry, api, coordinator),
     ]
 
     if coordinator.has_capability(CAP_FILTER):
@@ -71,6 +80,45 @@ class AquafeastSyncClockButton(AquafeastBaseButton):
         now = dt_util.now()
         await self._api.async_set_clock(now.hour, now.minute, now.second)
         await asyncio.sleep(2)
+        await self.coordinator.async_request_refresh()
+
+
+class AquafeastToggleUnitSystemButton(AquafeastBaseButton):
+    """Toggle metric/imperial units."""
+
+    _attr_name = "toggle measurement system"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:scale-balance"
+
+    def __init__(self, entry, api, coordinator) -> None:
+        """Initialize unit toggle button."""
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_toggle_measurement_system"
+
+    async def async_press(self) -> None:
+        """Toggle measurement system."""
+        current_value = self.coordinator.get_value(KEY_UNIT_SYSTEM, "0")
+        await self._api.async_toggle_unit_system(current_value)
+        await asyncio.sleep(2)
+        await self.coordinator.async_request_refresh()
+
+
+class AquafeastFactoryResetButton(AquafeastBaseButton):
+    """Factory reset button."""
+
+    _attr_name = "factory reset"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:alert-octagon"
+
+    def __init__(self, entry, api, coordinator) -> None:
+        """Initialize factory reset button."""
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_factory_reset"
+
+    async def async_press(self) -> None:
+        """Reset device."""
+        await self._api.async_factory_reset()
+        await asyncio.sleep(3)
         await self.coordinator.async_request_refresh()
 
 
