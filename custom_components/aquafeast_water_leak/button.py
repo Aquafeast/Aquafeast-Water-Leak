@@ -8,6 +8,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -115,8 +116,19 @@ class AquafeastFactoryResetButton(AquafeastBaseButton):
         super().__init__(entry, api, coordinator)
         self._attr_unique_id = f"{entry.entry_id}_factory_reset"
 
+    @property
+    def available(self) -> bool:
+        """Return availability."""
+        return super().available and self.coordinator.reset_armed
+
     async def async_press(self) -> None:
-        """Reset device."""
+        """Reset device only when armed."""
+        armed = await self.coordinator.async_consume_reset_arm()
+        if not armed:
+            raise HomeAssistantError(
+                "Factory reset is locked. Turn on 'factory reset arm' first."
+            )
+
         await self._api.async_factory_reset()
         await asyncio.sleep(3)
         await self.coordinator.async_request_refresh()
