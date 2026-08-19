@@ -22,6 +22,8 @@ from .const import (
     KEY_MODE,
     KEY_NEXT_FLUSH_HOURS,
     KEY_POWER_STATUS,
+    KEY_PREVIOUS_DAY_WATER_HIGH,
+    KEY_PREVIOUS_DAY_WATER_LOW,
     KEY_PREVIOUS_MODE,
     KEY_TEMPERATURE,
     KEY_TOTAL_WATER_HIGH,
@@ -118,11 +120,11 @@ async def async_setup_entry(
     coordinator = stored["coordinator"]
 
     entities: list[SensorEntity] = [
-        AquafeastMeasurementSystemSensor(entry, api, coordinator),
         AquafeastProtectionStateSensor(entry, api, coordinator),
         AquafeastWaterTemperatureSensor(entry, api, coordinator),
         AquafeastWaterFlowRateSensor(entry, api, coordinator),
         AquafeastTotalWaterSensor(entry, api, coordinator),
+        AquafeastPreviousDayWaterSensor(entry, api, coordinator),
         AquafeastLastModeSensor(entry, api, coordinator),
         AquafeastFaultStatusSensor(entry, api, coordinator),
         AquafeastFaultCodeSensor(entry, api, coordinator),
@@ -264,6 +266,37 @@ class AquafeastTotalWaterSensor(AquafeastBaseSensor):
 
         return round(metric_value, 2)
 
+class AquafeastPreviousDayWaterSensor(AquafeastBaseSensor):
+    """Water consumed during the previous working day."""
+
+    _attr_name = "previous day water"
+    _attr_icon = "mdi:water-clock"
+
+    def __init__(self, entry, api, coordinator) -> None:
+        super().__init__(entry, api, coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_previous_day_water"
+
+    @property
+    def native_unit_of_measurement(self):
+        return "gal" if _is_imperial(self.coordinator) else "m³"
+
+    @property
+    def native_value(self):
+        low = self.coordinator.get_int(KEY_PREVIOUS_DAY_WATER_LOW)
+        high = self.coordinator.get_int(KEY_PREVIOUS_DAY_WATER_HIGH)
+
+        if low is None and high is None:
+            return None
+
+        low = low or 0
+        high = high or 0
+
+        metric_value = high * 100 + (low / 100)
+
+        if _is_imperial(self.coordinator):
+            return round(metric_value * 264.172, 1)
+
+        return round(metric_value, 2)
 
 class AquafeastBatteryLevelSensor(AquafeastBaseSensor):
     _attr_name = "battery level"
