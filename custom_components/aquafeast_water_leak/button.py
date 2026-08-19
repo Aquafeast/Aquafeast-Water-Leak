@@ -36,7 +36,6 @@ async def async_setup_entry(
 
     entities: list[ButtonEntity] = [
         AquafeastSyncClockButton(entry, api, coordinator),
-        AquafeastToggleUnitSystemButton(entry, api, coordinator),
         AquafeastFactoryResetButton(entry, api, coordinator),
     ]
 
@@ -80,26 +79,6 @@ class AquafeastSyncClockButton(AquafeastBaseButton):
         """Sync device clock with Home Assistant time."""
         now = dt_util.now()
         await self._api.async_set_clock(now.hour, now.minute, now.second)
-        await asyncio.sleep(2)
-        await self.coordinator.async_request_refresh()
-
-
-class AquafeastToggleUnitSystemButton(AquafeastBaseButton):
-    """Toggle metric/imperial units."""
-
-    _attr_name = "toggle measurement system"
-    _attr_entity_category = EntityCategory.CONFIG
-    _attr_icon = "mdi:scale-balance"
-
-    def __init__(self, entry, api, coordinator) -> None:
-        """Initialize unit toggle button."""
-        super().__init__(entry, api, coordinator)
-        self._attr_unique_id = f"{entry.entry_id}_toggle_measurement_system"
-
-    async def async_press(self) -> None:
-        """Toggle measurement system."""
-        current_value = self.coordinator.get_value(KEY_UNIT_SYSTEM, "0")
-        await self._api.async_toggle_unit_system(current_value)
         await asyncio.sleep(2)
         await self.coordinator.async_request_refresh()
 
