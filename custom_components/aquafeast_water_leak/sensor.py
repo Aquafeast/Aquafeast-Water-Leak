@@ -270,7 +270,7 @@ class AquafeastPreviousDayWaterSensor(AquafeastBaseSensor):
     """Water consumed during the previous working day."""
 
     _attr_name = "previous day water"
-    _attr_icon = "mdi:water-clock"
+    _attr_icon = "mdi:history"
 
     def __init__(self, entry, api, coordinator) -> None:
         super().__init__(entry, api, coordinator)
